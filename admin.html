@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RyCord Admin Panel</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #1e1b4b 0%, #581c87 50%, #831843 100%); min-height: 100vh; padding: 24px; }
+        .container { max-width: 1200px; margin: 0 auto; background: #111827; border-radius: 12px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        .header { background: linear-gradient(90deg, #4f46e5 0%, #9333ea 100%); padding: 24px; color: white; }
+        .header h1 { font-size: 28px; display: flex; align-items: center; gap: 12px; }
+        .header p { color: #c7d2fe; margin-top: 8px; }
+        .tabs { display: flex; border-bottom: 1px solid #374151; background: #111827; }
+        .tab { padding: 16px 24px; background: none; border: none; color: #9ca3af; cursor: pointer; font-size: 15px; font-weight: 500; border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .tab:hover { color: white; background: #1f2937; }
+        .tab.active { color: white; background: #1f2937; border-bottom-color: #4f46e5; }
+        .content { padding: 24px; }
+        .section { display: none; }
+        .section.active { display: block; }
+        .form-group { margin-bottom: 24px; }
+        .form-group h2 { color: white; font-size: 20px; margin-bottom: 16px; }
+        .input-group { display: flex; gap: 8px; }
+        input[type="text"], input[type="password"] { flex: 1; padding: 10px 16px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: white; font-size: 14px; }
+        input[type="text"]:focus, input[type="password"]:focus { outline: none; border-color: #4f46e5; }
+        .btn { padding: 10px 24px; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary { background: #4f46e5; color: white; }
+        .btn-primary:hover { background: #4338ca; }
+        .btn-danger { background: #dc2626; color: white; }
+        .btn-danger:hover { background: #b91c1c; }
+        .btn-success { background: #16a34a; color: white; }
+        .btn-success:hover { background: #15803d; }
+        .list { display: flex; flex-direction: column; gap: 12px; }
+        .list-item { background: #1f2937; padding: 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .list-item-content { display: flex; align-items: center; gap: 12px; }
+        .list-item-name { color: white; font-weight: 500; }
+        .badge { padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .badge-warning { background: #d97706; color: #fef3c7; }
+        .badge-danger { background: #dc2626; color: #fee2e2; }
+        .channel-section { background: #1f2937; padding: 16px; border-radius: 8px; margin-bottom: 24px; }
+        .channel-section h3 { color: white; margin-bottom: 12px; font-size: 18px; }
+        .user-restriction { background: #374151; padding: 12px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.2s; }
+        .user-restriction:hover { background: #4b5563; }
+        .user-restriction.restricted { background: #7f1d1d; }
+        .user-restriction.restricted:hover { background: #991b1b; }
+        .user-restriction span { color: white; }
+        .status { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+        .status-restricted { color: #fca5a5; }
+        .status-allowed { color: #86efac; }
+        .empty-state { color: #9ca3af; text-align: center; padding: 48px; }
+        .avatar { width: 40px; height: 40px; background: #4f46e5; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; }
+        .ban-border { border-left: 4px solid #dc2626; }
+        .auth-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .auth-box { background: #1f2937; padding: 40px; border-radius: 12px; max-width: 400px; width: 90%; border: 1px solid #374151; }
+        .auth-box h2 { color: white; margin-bottom: 24px; text-align: center; }
+        .error { background: #dc2626; color: white; padding: 12px; border-radius: 8px; margin-bottom: 16px; display: none; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div id="authModal" class="auth-modal">
+        <div class="auth-box">
+            <h2>Admin Login</h2>
+            <div id="error" class="error"></div>
+            <input type="password" id="adminPassword" placeholder="Enter admin password" onkeypress="if(event.key==='Enter')adminLogin()">
+            <button class="btn btn-primary" style="width:100%;margin-top:16px;" onclick="adminLogin()">Login</button>
+        </div>
+    </div>
+    <div id="adminPanel" class="container hidden">
+        <div class="header">
+            <h1>RyCord Admin Panel</h1>
+            <p>Manage channels, users, and permissions</p>
+        </div>
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('channels')">📺 Channels</button>
+            <button class="tab" onclick="switchTab('users')">👥 Users</button>
+            <button class="tab" onclick="switchTab('restrictions')">🔒 Restrictions</button>
+            <button class="tab" onclick="switchTab('bans')">🚫 Bans</button>
+        </div>
+        <div class="content">
+            <div id="channels" class="section active">
+                <div class="form-group">
+                    <h2>Add New Channel</h2>
+                    <div class="input-group">
+                        <input type="text" id="newChannel" placeholder="Enter channel name...">
+                        <button class="btn btn-primary" onclick="addChannel()">➕ Add</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <h2>Existing Channels</h2>
+                    <div id="channelList" class="list"></div>
+                </div>
+            </div>
+            <div id="users" class="section">
+                <div class="form-group">
+                    <h2>Registered Users</h2>
+                    <div id="userList" class="list"></div>
+                </div>
+            </div>
+            <div id="restrictions" class="section">
+                <h2 style="color: white; margin-bottom: 8px;">Channel Access Restrictions</h2>
+                <p style="color: #9ca3af; margin-bottom: 24px;">Click to toggle user access to channels. Restricted users cannot access the channel.</p>
+                <div id="restrictionList"></div>
+            </div>
+            <div id="bans" class="section">
+                <div class="form-group">
+                    <h2>Ban User</h2>
+                    <div class="input-group">
+                        <input type="text" id="banUser" placeholder="Enter username to ban...">
+                        <button class="btn btn-danger" onclick="banUser()">🚫 Ban</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <h2>Banned Users</h2>
+                    <div id="banList" class="list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        let adminSession = null;
+        let data = {};
+        
+        async function adminLogin() {
+            const password = document.getElementById('adminPassword').value;
+            const response = await fetch('/api/admin/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({password})
+            });
+            const result = await response.json();
+            if (result.status === 'ok') {
+                adminSession = result.sessionId;
+                document.getElementById('authModal').classList.add('hidden');
+                document.getElementById('adminPanel').classList.remove('hidden');
+                loadData();
+            } else {
+                const err = document.getElementById('error');
+                err.textContent = 'Invalid password';
+                err.style.display = 'block';
+                setTimeout(() => err.style.display = 'none', 3000);
+            }
+        }
+        
+        async function loadData() {
+            const response = await fetch('/api/admin/data?session=' + adminSession);
+            data = await response.json();
+            renderAll();
+        }
+        
+        async function saveData() {
+            await fetch('/api/admin/data', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({...data, sessionId: adminSession})
+            });
+        }
+        
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(tab).classList.add('active');
+        }
+        
+        async function addChannel() {
+            const input = document.getElementById('newChannel');
+            const name = input.value.trim();
+            if (name && !data.channels.includes(name)) {
+                data.channels.push(name);
+                await saveData();
+                input.value = '';
+                renderAll();
+            }
+        }
+        
+        async function removeChannel(channel) {
+            if (!confirm('Delete channel "' + channel + '"?')) return;
+            data.channels = data.channels.filter(c => c !== channel);
+            delete data.restricted_channels[channel];
+            await saveData();
+            renderAll();
+        }
+        
+        async function banUser() {
+            const input = document.getElementById('banUser');
+            const name = input.value.trim();
+            if (name && !data.banned_users.includes(name)) {
+                data.banned_users.push(name);
+                await saveData();
+                input.value = '';
+                renderAll();
+            }
+        }
+        
+        async function unbanUser(username) {
+            data.banned_users = data.banned_users.filter(u => u !== username);
+            await saveData();
+            renderAll();
+        }
+        
+        async function toggleRestriction(channel, username) {
+            if (!data.restricted_channels[channel]) {
+                data.restricted_channels[channel] = [];
+            }
+            const idx = data.restricted_channels[channel].indexOf(username);
+            if (idx > -1) {
+                data.restricted_channels[channel].splice(idx, 1);
+            } else {
+                data.restricted_channels[channel].push(username);
+            }
+            await saveData();
+            renderRestrictions();
+        }
+        
+        function isRestricted(channel, username) {
+            return data.restricted_channels[channel]?.includes(username) || false;
+        }
+        
+        function renderChannels() {
+            const list = document.getElementById('channelList');
+            list.innerHTML = data.channels.map(ch => {
+                const restricted = data.restricted_channels[ch]?.length || 0;
+                return `
+                    <div class="list-item">
+                        <div class="list-item-content">
+                            <span class="list-item-name"># ${ch}</span>
+                            ${restricted > 0 ? `<span class="badge badge-warning">${restricted} restricted</span>` : ''}
+                        </div>
+                        <button class="btn btn-danger" onclick="removeChannel('${ch}')">🗑️ Remove</button>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function renderUsers() {
+            const list = document.getElementById('userList');
+            if (data.users.length === 0) {
+                list.innerHTML = '<div class="empty-state">No users registered yet</div>';
+                return;
+            }
+            list.innerHTML = data.users.map(user => {
+                const banned = data.banned_users.includes(user);
+                return `
+                    <div class="list-item">
+                        <div class="list-item-content">
+                            <div class="avatar">${user[0].toUpperCase()}</div>
+                            <span class="list-item-name">${user}</span>
+                            ${banned ? '<span class="badge badge-danger">BANNED</span>' : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function renderRestrictions() {
+            const list = document.getElementById('restrictionList');
+            list.innerHTML = data.channels.map(ch => `
+                <div class="channel-section">
+                    <h3># ${ch}</h3>
+                    <div>
+                        ${data.users.length > 0 ? data.users.map(user => {
+                            const restricted = isRestricted(ch, user);
+                            return `
+                                <div class="user-restriction ${restricted ? 'restricted' : ''}" 
+                                     onclick="toggleRestriction('${ch}', '${user}')">
+                                    <span>${user}</span>
+                                    <div class="status ${restricted ? 'status-restricted' : 'status-allowed'}">
+                                        ${restricted ? '❌ Restricted' : '✅ Allowed'}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('') : '<p style="color: #9ca3af; font-size: 13px;">No users to restrict</p>'}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function renderBans() {
+            const list = document.getElementById('banList');
+            if (data.banned_users.length === 0) {
+                list.innerHTML = '<div class="empty-state">No banned users</div>';
+                return;
+            }
+            list.innerHTML = data.banned_users.map(user => `
+                <div class="list-item ban-border">
+                    <div class="list-item-content">
+                        <span class="list-item-name">🚫 ${user}</span>
+                        <span class="badge badge-danger">BANNED</span>
+                    </div>
+                    <button class="btn btn-success" onclick="unbanUser('${user}')">Unban</button>
+                </div>
+            `).join('');
+        }
+        
+        function renderAll() {
+            renderChannels();
+            renderUsers();
+            renderRestrictions();
+            renderBans();
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('adminPassword').focus();
+        });
+    </script>
+</body>
+</html>
