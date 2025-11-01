@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RyCord - Messaging App</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #36393f; color: #dcddde; height: 100vh; overflow: hidden; }
+        .container { display: flex; height: 100vh; }
+        .sidebar { width: 240px; background: #2f3136; display: flex; flex-direction: column; }
+        .server-header { padding: 16px; border-bottom: 1px solid #202225; font-weight: 600; font-size: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .header-buttons { display: flex; gap: 4px; }
+        .logout-btn, .admin-btn { background: #ed4245; border: none; color: white; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .admin-btn { background: #5865f2; }
+        .channels { flex: 1; overflow-y: auto; padding: 8px; }
+        .channel { padding: 8px 12px; margin: 2px 0; border-radius: 4px; cursor: pointer; display: flex; align-items: center; color: #8e9297; transition: all 0.15s; }
+        .channel:hover { background: #3a3c43; color: #dcddde; }
+        .channel.active { background: #393c43; color: #fff; }
+        .channel-icon { margin-right: 8px; font-size: 18px; }
+        .main-content { flex: 1; display: flex; flex-direction: column; background: #36393f; }
+        .chat-header { height: 48px; border-bottom: 1px solid #202225; display: flex; align-items: center; padding: 0 16px; font-weight: 600; }
+        .messages { flex: 1; overflow-y: auto; padding: 16px; }
+        .message { display: flex; padding: 4px 0; margin: 8px 0; position: relative; transition: background 0.1s; }
+        .message:hover { background: #32353b; margin: 8px -8px; padding: 4px 8px; border-radius: 4px; }
+        .message:hover .message-actions { opacity: 1; }
+        .avatar { width: 40px; height: 40px; border-radius: 50%; margin-right: 16px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; flex-shrink: 0; }
+        .message-content { flex: 1; }
+        .message-header { display: flex; align-items: baseline; margin-bottom: 4px; }
+        .username { font-weight: 600; margin-right: 8px; }
+        .timestamp { font-size: 12px; color: #72767d; }
+        .message-text { color: #dcddde; line-height: 1.4; word-wrap: break-word; }
+        .message-actions { position: absolute; top: -12px; right: 16px; background: #2f3136; border: 1px solid #202225; border-radius: 4px; padding: 4px; display: flex; gap: 4px; opacity: 0; transition: opacity 0.1s; }
+        .action-btn { background: transparent; border: none; color: #b9bbbe; cursor: pointer; padding: 4px 8px; border-radius: 3px; font-size: 12px; }
+        .action-btn:hover { background: #36393f; color: #dcddde; }
+        .delete-btn:hover { color: #ed4245; }
+        .media-preview { margin-top: 8px; max-width: 400px; }
+        .media-preview img, .media-preview video { max-width: 100%; border-radius: 4px; cursor: pointer; }
+        .file-attachment { margin-top: 8px; background: #2f3136; padding: 12px; border-radius: 4px; border-left: 4px solid #5865f2; display: inline-flex; align-items: center; gap: 12px; cursor: pointer; }
+        .file-icon { font-size: 32px; }
+        .file-info { display: flex; flex-direction: column; }
+        .file-name { font-weight: 600; color: #00aff4; }
+        .file-size { font-size: 12px; color: #72767d; }
+        .input-container { padding: 16px; position: relative; }
+        .input-wrapper { background: #40444b; border-radius: 8px; padding: 12px; display: flex; align-items: center; gap: 8px; }
+        .message-input { background: transparent; border: none; flex: 1; color: #dcddde; font-size: 15px; outline: none; }
+        .attach-btn { background: transparent; border: none; color: #b9bbbe; cursor: pointer; font-size: 20px; padding: 4px; }
+        .attach-btn:hover { color: #dcddde; }
+        .users-sidebar { width: 240px; background: #2f3136; padding: 16px; overflow-y: auto; }
+        .users-header { font-size: 12px; font-weight: 600; color: #8e9297; margin-bottom: 8px; text-transform: uppercase; }
+        .user { display: flex; align-items: center; padding: 8px; margin: 2px 0; border-radius: 4px; }
+        .user-avatar { width: 32px; height: 32px; border-radius: 50%; margin-right: 12px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; position: relative; }
+        .status-indicator { width: 10px; height: 10px; background: #3ba55d; border-radius: 50%; position: absolute; bottom: -2px; right: -2px; border: 2px solid #2f3136; }
+        .auth-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .auth-box { background: #36393f; padding: 40px; border-radius: 8px; max-width: 480px; width: 90%; }
+        .auth-box h2 { margin-bottom: 8px; color: #fff; text-align: center; }
+        .auth-subtitle { text-align: center; color: #b9bbbe; margin-bottom: 24px; }
+        .auth-input { width: 100%; padding: 12px; margin-bottom: 16px; border: 1px solid #202225; border-radius: 4px; background: #2f3136; color: #dcddde; font-size: 16px; }
+        .auth-button { width: 100%; padding: 12px; background: #5865f2; border: none; border-radius: 4px; color: white; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+        .auth-button:hover { background: #4752c4; }
+        .auth-toggle { text-align: center; margin-top: 16px; color: #b9bbbe; }
+        .auth-link { color: #00aff4; cursor: pointer; text-decoration: none; }
+        .auth-link:hover { text-decoration: underline; }
+        .error-message { background: #ed4245; color: white; padding: 12px; border-radius: 4px; margin-bottom: 16px; display: none; }
+        .hidden { display: none !important; }
+        #fileInput { display: none; }
+        ::-webkit-scrollbar { width: 16px; }
+        ::-webkit-scrollbar-track { background: #2f3136; }
+        ::-webkit-scrollbar-thumb { background: #202225; border-radius: 8px; border: 4px solid #2f3136; }
+        ::-webkit-scrollbar-thumb:hover { background: #18191c; }
+    </style>
+</head>
+<body>
+    <div id="authModal" class="auth-modal">
+        <div class="auth-box">
+            <div id="errorMessage" class="error-message"></div>
+            <div id="loginForm">
+                <h2>Welcome back!</h2>
+                <p class="auth-subtitle">We're so excited to see you again!</p>
+                <input type="text" id="loginUsername" class="auth-input" placeholder="Username">
+                <input type="password" id="loginPassword" class="auth-input" placeholder="Password">
+                <button onclick="login()" class="auth-button">Login</button>
+                <p class="auth-toggle">Need an account? <a class="auth-link" onclick="showSignup()">Register</a></p>
+            </div>
+            <div id="signupForm" class="hidden">
+                <h2>Create an account</h2>
+                <p class="auth-subtitle">Join RyCord and start chatting!</p>
+                <input type="text" id="signupUsername" class="auth-input" placeholder="Username" maxlength="20">
+                <input type="password" id="signupPassword" class="auth-input" placeholder="Password">
+                <input type="password" id="signupConfirm" class="auth-input" placeholder="Confirm Password">
+                <button onclick="signup()" class="auth-button">Sign Up</button>
+                <p class="auth-toggle">Already have an account? <a class="auth-link" onclick="showLogin()">Login</a></p>
+            </div>
+        </div>
+    </div>
+    <div id="chatApp" class="container hidden">
+        <div class="sidebar">
+            <div class="server-header">
+                <span>RyCord</span>
+                <div class="header-buttons">
+                    <button class="admin-btn" onclick="openAdmin()">Admin</button>
+                    <button class="logout-btn" onclick="logout()">Logout</button>
+                </div>
+            </div>
+            <div class="channels" id="channelsList"></div>
+        </div>
+        <div class="main-content">
+            <div class="chat-header"># <span id="currentChannel">general</span></div>
+            <div class="messages" id="messages"></div>
+            <div class="input-container">
+                <div class="input-wrapper">
+                    <button class="attach-btn" onclick="document.getElementById('fileInput').click()">📎</button>
+                    <input type="text" id="messageInput" class="message-input" placeholder="Message #general" onkeypress="handleKeyPress(event)">
+                </div>
+                <input type="file" id="fileInput" onchange="handleFileSelect(event)" accept="*/*">
+            </div>
+        </div>
+        <div class="users-sidebar">
+            <div class="users-header">Online — <span id="userCount">0</span></div>
+            <div id="usersList"></div>
+        </div>
+    </div>
+    <script>
+        let sessionId = null, username = null, currentChannel = 'general', userColor = null, lastMessageId = null;
+        const MAX_FILE_SIZE = 100 * 1024 * 1024;
+        
+        function showError(message) { const errorDiv = document.getElementById('errorMessage'); errorDiv.textContent = message; errorDiv.style.display = 'block'; setTimeout(() => { errorDiv.style.display = 'none'; }, 3000); }
+        function showLogin() { document.getElementById('loginForm').classList.remove('hidden'); document.getElementById('signupForm').classList.add('hidden'); }
+        function showSignup() { document.getElementById('signupForm').classList.remove('hidden'); document.getElementById('loginForm').classList.add('hidden'); }
+        function openAdmin() { window.open('/admin', '_blank'); }
+        async function signup() { const username = document.getElementById('signupUsername').value.trim(); const password = document.getElementById('signupPassword').value; const confirm = document.getElementById('signupConfirm').value; if (!username || !password) { showError('Please fill in all fields'); return; } if (password !== confirm) { showError('Passwords do not match'); return; } if (password.length < 4) { showError('Password must be at least 4 characters'); return; } const response = await fetch('/api/signup', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username, password}) }); const data = await response.json(); if (data.status === 'ok') { showError('Account created! Please login.'); setTimeout(() => showLogin(), 1500); } else { showError(data.message || 'Signup failed'); } }
+        async function login() { const user = document.getElementById('loginUsername').value.trim(); const password = document.getElementById('loginPassword').value; if (!user || !password) { showError('Please fill in all fields'); return; } const response = await fetch('/api/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username: user, password}) }); const data = await response.json(); if (data.status === 'ok') { username = user; sessionId = data.sessionId; userColor = data.color; document.getElementById('authModal').classList.add('hidden'); document.getElementById('chatApp').classList.remove('hidden'); loadChannels(); loadMessages(); loadUsers(); startHeartbeat(); startPolling(); } else { showError(data.message || 'Login failed'); } }
+        function logout() { sessionId = null; username = null; document.getElementById('chatApp').classList.add('hidden'); document.getElementById('authModal').classList.remove('hidden'); showLogin(); }
+        async function loadChannels() { const response = await fetch('/api/channels'); const data = await response.json(); document.getElementById('channelsList').innerHTML = data.channels.map(ch => `<div class="channel ${ch === currentChannel ? 'active' : ''}" onclick="switchChannel('${ch}')"><span class="channel-icon">#</span><span>${ch}</span></div>`).join(''); }
+        function switchChannel(channel) { currentChannel = channel; document.getElementById('currentChannel').textContent = channel; document.getElementById('messageInput').placeholder = `Message #${channel}`; loadChannels(); loadMessages(); }
+        async function loadMessages() { const response = await fetch(`/api/messages?channel=${currentChannel}`); const data = await response.json(); const messagesDiv = document.getElementById('messages'); const wasAtBottom = messagesDiv.scrollHeight - messagesDiv.scrollTop <= messagesDiv.clientHeight + 100; messagesDiv.innerHTML = data.messages.map(msg => { let mediaHtml = ''; if (msg.type === 'image') { mediaHtml = `<div class="media-preview"><img src="/api/file/${msg.fileId}" onclick="window.open('/api/file/${msg.fileId}', '_blank')"></div>`; } else if (msg.type === 'video') { mediaHtml = `<div class="media-preview"><video controls src="/api/file/${msg.fileId}"></video></div>`; } else if (msg.type === 'file') { mediaHtml = `<div class="file-attachment" onclick="window.open('/api/file/${msg.fileId}', '_blank')"><div class="file-icon">📄</div><div class="file-info"><div class="file-name">${escapeHtml(msg.fileName)}</div><div class="file-size">${formatFileSize(msg.fileSize)}</div></div></div>`; } const canDelete = msg.username === username; return `<div class="message" data-msg-id="${msg.id}"><div class="avatar" style="background: ${msg.color}">${msg.username.charAt(0).toUpperCase()}</div><div class="message-content"><div class="message-header"><span class="username" style="color: ${msg.color}">${msg.username}</span><span class="timestamp">${formatTime(msg.timestamp)}</span></div>${msg.text ? `<div class="message-text">${escapeHtml(msg.text)}</div>` : ''}${mediaHtml}</div>${canDelete ? `<div class="message-actions"><button class="action-btn delete-btn" onclick="deleteMessage('${msg.id}', '${currentChannel}')">🗑️ Delete</button></div>` : ''}</div>`; }).join(''); if (wasAtBottom || !lastMessageId) { messagesDiv.scrollTop = messagesDiv.scrollHeight; } if (data.messages.length > 0) { lastMessageId = data.messages[data.messages.length - 1].id; } }
+        async function loadUsers() { const response = await fetch('/api/users'); const data = await response.json(); document.getElementById('userCount').textContent = data.users.length; document.getElementById('usersList').innerHTML = data.users.map(user => `<div class="user"><div class="user-avatar" style="background: ${user.color}">${user.username.charAt(0).toUpperCase()}<div class="status-indicator"></div></div><span>${user.username}${user.username === username ? ' (you)' : ''}</span></div>`).join(''); }
+        async function sendMessage() { const input = document.getElementById('messageInput'); const text = input.value.trim(); if (!text) return; const msgId = generateId(); await fetch('/api/send', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id: msgId, sessionId, username, channel: currentChannel, text, color: userColor, type: 'text' }) }); input.value = ''; loadMessages(); }
+        async function handleFileSelect(event) { const file = event.target.files[0]; if (!file) return; if (file.size > MAX_FILE_SIZE) { alert('File too large. Maximum size is 100MB.'); return; } const reader = new FileReader(); reader.onload = async (e) => { const base64Data = e.target.result.split(',')[1]; const fileType = file.type; let msgType = 'file'; if (fileType.startsWith('image/')) { msgType = 'image'; } else if (fileType.startsWith('video/')) { msgType = 'video'; } const msgId = generateId(); await fetch('/api/upload', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id: msgId, sessionId, username, channel: currentChannel, color: userColor, type: msgType, fileName: file.name, fileSize: file.size, fileData: base64Data, mimeType: fileType }) }); event.target.value = ''; loadMessages(); }; reader.readAsDataURL(file); }
+        async function deleteMessage(msgId, channel) { if (!confirm('Delete this message?')) return; await fetch('/api/delete', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ messageId: msgId, channel, sessionId, username }) }); loadMessages(); }
+        function handleKeyPress(event) { if (event.key === 'Enter') { sendMessage(); } }
+        function startHeartbeat() { setInterval(async () => { if (sessionId) { await fetch('/api/heartbeat', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({sessionId, username, color: userColor}) }); } }, 3000); }
+        function startPolling() { setInterval(() => { if (sessionId) { loadMessages(); loadUsers(); loadChannels(); } }, 1000); }
+        function generateId() { return Date.now().toString(36) + Math.random().toString(36).substr(2); }
+        function formatTime(timestamp) { const date = new Date(timestamp); const now = new Date(); const yesterday = new Date(now); yesterday.setDate(yesterday.getDate() - 1); const hours = date.getHours().toString().padStart(2, '0'); const minutes = date.getMinutes().toString().padStart(2, '0'); const time = `${hours}:${minutes}`; if (date.toDateString() === now.toDateString()) { return `Today at ${time}`; } else if (date.toDateString() === yesterday.toDateString()) { return `Yesterday at ${time}`; } else { return `${date.toLocaleDateString()} ${time}`; } }
+        function formatFileSize(bytes) { if (bytes < 1024) return bytes + ' B'; if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'; return (bytes / (1024 * 1024)).toFixed(1) + ' MB'; }
+        function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
+        document.addEventListener('DOMContentLoaded', () => { document.getElementById('loginUsername').focus(); });
+    </script>
+</body>
+</html>
